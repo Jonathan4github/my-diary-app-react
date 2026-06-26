@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tutorial: Link, useNavigate, and why not &lt;a href&gt;</title>
+  <style>
+    :root {
+      --bg: #faf7f5;
+      --card: #ffffff;
+      --text: #2d2a32;
+      --muted: #6b6570;
+      --accent: #7c5cff;
+      --accent-soft: #efeaff;
+      --border: #e7e2e9;
+      --code-bg: #2d2a32;
+      --code-text: #f4f1f7;
+      --good: #1e9e6a;
+      --bad: #d24b67;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.65;
+    }
+
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 48px 20px 80px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      line-height: 1.25;
+      margin: 0 0 8px;
+    }
+
+    .lead {
+      color: var(--muted);
+      margin: 0 0 32px;
+    }
+
+    h2 {
+      margin: 48px 0 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 1.4rem;
+    }
+
+    h3 { margin: 28px 0 10px; font-size: 1.1rem; }
+
+    p { margin: 12px 0; }
+
+    /* Inline code */
+    code {
+      background: var(--accent-soft);
+      color: #5a3ff0;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-size: 0.9em;
+    }
+
+    /* Code blocks */
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 18px 20px;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-size: 0.88rem;
+      line-height: 1.55;
+    }
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    /* Quote / callout */
+    blockquote {
+      margin: 18px 0;
+      padding: 12px 18px;
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 10px 10px 0;
+      color: #4a3da6;
+    }
+    blockquote p { margin: 6px 0; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      background: var(--card);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 0 var(--border);
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+    th {
+      background: #f3eefe;
+      font-weight: 600;
+    }
+    tr:last-child td { border-bottom: none; }
+
+    ul, ol { padding-left: 22px; }
+    li { margin: 6px 0; }
+
+    .good { color: var(--good); font-weight: 600; }
+    .bad  { color: var(--bad);  font-weight: 600; }
+
+    .tldr {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-top: 36px;
+    }
+    .tldr h2 { border: none; margin-top: 0; padding-top: 0; }
+
+    .file-note {
+      font-size: 0.85rem;
+      color: var(--muted);
+      background: var(--card);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <h1>Tutorial: <code>Link</code>, <code>useNavigate</code>, and why not <code>&lt;a href&gt;</code></h1>
+    <p class="lead">A simple guide for students. We use real code from this app
+      (<code>src/components/Auth.jsx</code>).</p>
+
+    <p class="file-note">📄 This is the HTML copy. The Markdown version is
+      <code>docs/react-router-link-and-navigate.md</code>.</p>
+
+    <!-- 1 -->
+    <h2>1. The problem with a normal <code>&lt;a href&gt;</code></h2>
+    <p>Our app is a <strong>Single Page App (SPA)</strong>. This means the browser
+      loads the page <strong>one time</strong>. After that, React just shows and
+      hides parts of the screen as you move around. The page does not reload.</p>
+
+    <p>A normal HTML link breaks this:</p>
+    <pre><code>&lt;!-- ❌ Do not do this in a React Router app --&gt;
+&lt;a href="/dashboard"&gt;Go to dashboard&lt;/a&gt;</code></pre>
+
+    <p>When you click it, the browser <strong>reloads the whole page</strong>:</p>
+    <ol>
+      <li>It throws away the running React app.</li>
+      <li>It asks the server for <code>/dashboard</code> again.</li>
+      <li>React starts again from zero.</li>
+    </ol>
+
+    <p>You see a white flash, and it feels slow. You also <strong>lose everything
+      in memory</strong> — like text typed in a form — because the app started over.</p>
+
+    <blockquote>
+      <p>Think of <code>&lt;a href&gt;</code> as <em>"knock the house down and build it again."</em></p>
+      <p>React Router is <em>"just walk into another room."</em></p>
+    </blockquote>
+
+    <!-- 2 -->
+    <h2>2. The fix: use <code>&lt;Link&gt;</code> for clicks</h2>
+    <p><code>react-router-dom</code> gives us <code>&lt;Link&gt;</code>. It still
+      makes a real link on the page, so it looks and works like a link. But it
+      stops the reload and changes the page in a fast way.</p>
+
+    <p>Real code from this app — <code>src/components/Auth.jsx</code>:</p>
+    <pre><code>import { Link } from "react-router-dom";
+
+// Logo that takes you back to the home page
+&lt;Link to="/" className="auth-logo"&gt;
+  &lt;img src="/images/logo-trimmed.png" alt="My Diary Logo" /&gt;
+&lt;/Link&gt;
+
+// Link to the other auth screen
+&lt;Link to="/signup"&gt;Sign up&lt;/Link&gt;</code></pre>
+
+    <h3><code>&lt;a&gt;</code> vs <code>&lt;Link&gt;</code></h3>
+    <table>
+      <thead>
+        <tr><th>Normal <code>&lt;a href&gt;</code></th><th>React Router <code>&lt;Link to&gt;</code></th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Reloads the whole page</td><td>No reload — fast</td></tr>
+        <tr><td>App restarts, data is lost</td><td>App keeps running, data stays</td></tr>
+        <tr><td>White flash</td><td>Smooth</td></tr>
+        <tr><td>Uses <code>href</code></td><td>Uses <code>to</code></td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Simple rule:</strong></p>
+    <ul>
+      <li>Going to a page <strong>inside your app</strong>? → use <code>&lt;Link to="..."&gt;</code>.</li>
+      <li>Going to <strong>another website</strong> (like <code>https://google.com</code>)? →
+        use a normal <code>&lt;a href="..."&gt;</code>. React Router only knows your own pages.</li>
+    </ul>
+
+    <!-- 3 -->
+    <h2>3. <code>useNavigate</code> to move with code</h2>
+    <p><code>&lt;Link&gt;</code> is good when the user <strong>clicks</strong>
+      something. But sometimes you need to move the user when there is
+      <strong>nothing to click</strong>.</p>
+
+    <p>Example: after the user logs in, you want to send them to the dashboard by
+      yourself. There is no link to press. <strong>Your code</strong> decides to move.</p>
+
+    <p>Real code from <code>src/components/Auth.jsx</code>:</p>
+    <pre><code>import { useNavigate } from "react-router-dom";
+
+export default function Auth({ mode = "login" }) {
+  // 1. Get the navigate function
+  const navigate = useNavigate();
+
+  const handleSubmit = (e) =&gt; {
+    e.preventDefault();
+    if (!email.trim() || !password) return;
+
+    setUser(email.trim());
+
+    // 2. Move to another page with code (still no reload!)
+    navigate("/dashboard");
+  };
+
+  // ...
+}</code></pre>
+
+    <h3>When to use which?</h3>
+    <table>
+      <thead>
+        <tr><th>What is happening</th><th>Use</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>User clicks a link or menu item</td><td><code>&lt;Link&gt;</code></td></tr>
+        <tr><td>After a form is sent</td><td><code>useNavigate</code></td></tr>
+        <tr><td>After an API call finishes</td><td><code>useNavigate</code></td></tr>
+        <tr><td>Send away a user who is not logged in</td><td><code>useNavigate</code></td></tr>
+        <tr><td>A normal "go to this page" link</td><td><code>&lt;Link&gt;</code></td></tr>
+      </tbody>
+    </table>
+
+    <blockquote>
+      <p>Easy way to remember:</p>
+      <p><strong><code>Link</code> = the user moves. <code>useNavigate</code> = your code moves.</strong></p>
+    </blockquote>
+
+    <!-- 4 -->
+    <h2>4. More things <code>useNavigate</code> can do</h2>
+    <pre><code>const navigate = useNavigate();
+
+navigate("/dashboard");   // go to a page
+navigate(-1);             // go back one page (like the back button)
+navigate(1);              // go forward one page
+
+// Replace the current page in history instead of adding a new one.
+// Good after login, so the back button does not go to the login screen.
+navigate("/dashboard", { replace: true });</code></pre>
+
+    <p><code>&lt;Link&gt;</code> can also use <code>replace</code>:</p>
+    <pre><code>&lt;Link to="/login" replace&gt;Log in&lt;/Link&gt;</code></pre>
+
+    <!-- 5 -->
+    <h2>5. One thing to be careful about</h2>
+    <p><code>useNavigate</code> is a <strong>React Hook</strong>. So follow the hook rules:</p>
+    <ul>
+      <li><span class="good">✅</span> Call it at the <strong>top</strong> of your component.</li>
+      <li><span class="bad">❌</span> Do not call it inside an <code>if</code> or a loop.</li>
+      <li>It only works inside pages that live inside the router
+        (set up in <code>src/App.jsx</code>).</li>
+    </ul>
+
+    <pre><code>// ❌ Wrong — hook is inside an if
+if (loggedIn) {
+  const navigate = useNavigate();
+}
+
+// ✅ Right — hook at the top, the if is around the call
+const navigate = useNavigate();
+if (loggedIn) {
+  navigate("/dashboard");
+}</code></pre>
+
+    <!-- 6 -->
+    <h2>6. Try it yourself</h2>
+    <ol>
+      <li>Open <code>src/components/Auth.jsx</code>.</li>
+      <li>Change the <code>&lt;Link to="/signup"&gt;</code> to
+        <code>&lt;a href="/signup"&gt;</code>. Click it and watch the page
+        <strong>flash and reload</strong>.</li>
+      <li>Change it back to <code>&lt;Link&gt;</code>. Now it is <strong>fast</strong>.</li>
+      <li>In <code>handleSubmit</code>, try
+        <code>navigate("/dashboard", { replace: true })</code>. Now the
+        <strong>back button</strong> does not go back to the login form.</li>
+    </ol>
+
+    <!-- TL;DR -->
+    <div class="tldr">
+      <h2>In short</h2>
+      <ul>
+        <li>The app loads <strong>once</strong>, then just swaps views. A reload undoes that.</li>
+        <li><code>&lt;a href&gt;</code> → full reload, lost data, slow. Do not use for <strong>inside</strong> links.</li>
+        <li><code>&lt;Link to="..."&gt;</code> → fast click navigation, no reload. Use for inside links.</li>
+        <li><code>useNavigate()</code> → move the user <strong>from code</strong> (after a form, redirects, etc.).</li>
+        <li>Other websites still use a normal <code>&lt;a href&gt;</code>.</li>
+      </ul>
+    </div>
+
+  </div>
+</body>
+</html>
