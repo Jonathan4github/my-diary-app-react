@@ -1,102 +1,98 @@
-import { useState, useEffect, useRef } from "react";
+// EntryEditor.jsx
+// -----------------------------------------------------------------------------
+// A PURE React form that handles BOTH writing a new entry AND editing one.
+//
+//   /entry      -> blank form for a NEW entry
+//   /entry/:id  -> the form pre-filled with an EXISTING entry to edit
+//
+// The form only manages what the user is typing (title, body, tags, mood) using
+// React state. On save it either adds a new entry or updates the existing one
+// in the shared context. (Later, those calls become real database requests —
+// see the `TODO (database)` note in handleSubmit.)
+// -----------------------------------------------------------------------------
+
+import { useState, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import BgBlob from "../components/BgBlob.jsx";
 import BottomNav from "../components/BottomNav.jsx";
-import { loadEntries, saveEntries } from "../lib/storage.js";
+import MoodPicker, { getMood } from "../components/MoodPicker.jsx";
+import { useEntries } from "../context/EntriesContext.jsx";
 import { BackIcon, SaveIcon, TagIcon } from "../components/Icons.jsx";
 
-const MOODS = [
-  { value: "😊", label: "😊 Happy" },
-  { value: "🥰", label: "🥰 Grateful" },
-  { value: "😌", label: "😌 Calm" },
-  { value: "🤔", label: "🤔 Thoughtful" },
-  { value: "😮‍💨", label: "😮‍💨 Tired" },
-  { value: "😔", label: "😔 Low" },
-];
-
 export default function EntryEditor() {
+  // Lets us change pages from code (after a successful save).
   const navigate = useNavigate();
+
+  // Shared list + the functions to change it.
+  const { entries, addEntry, updateEntry } = useEntries();
+
+  // Is there an :id in the URL? If so, we are EDITING that entry.
   const { id } = useParams();
   const editId = id ? Number(id) : null;
+  const existing = entries.find((e) => e.id === editId);
 
-  const [title, setTitle] = useState("");
-  const [body, setBody] = useState("");
-  const [tags, setTags] = useState("");
-  const [mood, setMood] = useState("😊");
-  const [createdAt, setCreatedAt] = useState(() => new Date());
-  const [editing, setEditing] = useState(false);
-  const [status, setStatus] = useState("");
+  // ---- Form state (controlled inputs) ---------------------------------------
+  // Start the fields from the existing entry when editing, or empty when new.
+  // (The data is in memory, so it's ready on the very first render — no effect.)
+  const [title, setTitle] = useState(existing ? existing.title : "");
+  const [body, setBody] = useState(existing ? existing.body : "");
+  const [tags, setTags] = useState(existing ? existing.tags.join(", ") : "");
+  const [mood, setMood] = useState(existing ? existing.mood : "😊");
+  const [status, setStatus] = useState("");  // the little "Saved ✓" message
 
+  // The date label: the entry's own date when editing, otherwise "Today".
+  const dateLabel = existing ? existing.date : "Today";
+
+  // Refs let us move focus to a field that needs fixing during validation.
   const titleRef = useRef(null);
   const bodyRef = useRef(null);
 
-  // Load the entry being edited (if any)
-  useEffect(() => {
-    if (editId == null) return;
-    const existing = loadEntries().find((e) => e.id === editId);
-    if (existing) {
-      setEditing(true);
-      setTitle(existing.title);
-      setBody(existing.body);
-      setTags((existing.tags || []).join(", "));
-      setMood(existing.mood || "😊");
-      setCreatedAt(new Date(existing.createdAt));
-      document.title = "Edit Entry · My Diary";
-    }
-  }, [editId]);
-
-  const dateLabel = createdAt.toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-
+  // Live word count — pure React, recalculated as the user types.
   const wordCount = body.trim().split(/\s+/).filter(Boolean).length;
 
   const handleSubmit = (e) => {
+    // Stop the browser from reloading the page on submit.
     e.preventDefault();
 
     const trimmedTitle = title.trim();
     const trimmedBody = body.trim();
+
+    // Simple validation: both title and body are required. Focus the empty one.
     if (!trimmedTitle || !trimmedBody) {
       (trimmedTitle ? bodyRef : titleRef).current?.focus();
       return;
     }
 
+    // Turn the comma-separated tags string into a clean array.
     const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
-    const entries = loadEntries();
 
-    let targetId = editId;
-    if (editing && editId != null) {
-      const idx = entries.findIndex((en) => en.id === editId);
-      if (idx !== -1) {
-        entries[idx] = {
-          ...entries[idx],
-          title: trimmedTitle,
-          body: trimmedBody,
-          mood,
-          tags: tagList,
-          updatedAt: new Date().toISOString(),
-        };
-      }
+    // Look up the colour + name for the chosen mood so the card matches the
+    // sample cards (e.g. "😊" -> mood-happy / "Happy").
+    const moodMeta = getMood(mood);
+
+    const fields = {
+      mood,
+      moodClass: moodMeta.className,
+      moodTitle: moodMeta.title,
+      title: trimmedTitle,
+      body: trimmedBody,
+      tags: tagList,
+    };
+
+    // TODO (database): replace these context calls with real API requests, e.g.
+    //   POST /api/entries        (new)
+    //   PUT  /api/entries/:id    (edit)
+    if (existing) {
+      // EDITING: update the entry in place, then show it in the viewer.
+      updateEntry(editId, fields);
+      setStatus("Saved ✓");
+      setTimeout(() => navigate(`/view/${editId}`), 600);
     } else {
-      const now = new Date();
-      targetId = now.getTime();
-      entries.unshift({
-        id: targetId,
-        title: trimmedTitle,
-        body: trimmedBody,
-        mood,
-        tags: tagList,
-        createdAt: now.toISOString(),
-      });
+      // NEW: add it to the top of the list, then go to the dashboard.
+      addEntry(fields);
+      setStatus("Saved ✓");
+      setTimeout(() => navigate("/dashboard"), 600);
     }
-
-    saveEntries(entries);
-    setStatus("Saved ✓");
-    setTimeout(() => {
-      navigate(editing ? `/view/${targetId}` : "/dashboard");
-    }, 600);
   };
 
   return (
@@ -122,24 +118,8 @@ export default function EntryEditor() {
           </div>
         </header>
 
-        {/* MOOD */}
-        <fieldset className="editor-mood">
-          <legend>How are you feeling?</legend>
-          <div className="mood-options" role="radiogroup" aria-label="Mood">
-            {MOODS.map((m) => (
-              <label key={m.value} className="mood-chip">
-                <input
-                  type="radio"
-                  name="mood"
-                  value={m.value}
-                  checked={mood === m.value}
-                  onChange={() => setMood(m.value)}
-                />
-                <span>{m.label}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
+        {/* MOOD — reusable picker; this page just owns the selected value. */}
+        <MoodPicker value={mood} onChange={setMood} />
 
         {/* TITLE */}
         <input

@@ -1,110 +1,83 @@
-import { useState, useEffect, useMemo } from "react";
+// Dashboard.jsx
+// -----------------------------------------------------------------------------
+// A PURE React dashboard. No localStorage, no plain-JS data crunching.
+//
+// Right now every piece of data (the user, the stats, the entries) is just
+// placeholder React state defined at the top of this file. The UI only knows
+// how to RENDER that state — it does not care where the data came from.
+//
+// Later, when we connect a real database/API, we will only change WHERE the
+// state is filled in (see the `TODO` notes inside the component). The JSX below
+// will not need to change at all. That separation — data vs. display — is the
+// whole point of building it this way.
+// -----------------------------------------------------------------------------
+
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import BgBlob from "../components/BgBlob.jsx";
-import { loadEntries, getUser, clearUser } from "../lib/storage.js";
+import StatCard from "../components/StatCard.jsx";
+import EntryCard from "../components/EntryCard.jsx";
+import { useEntries } from "../context/EntriesContext.jsx";
 import {
-  GridIcon, BookIcon, CalendarIcon, HeartIcon, SettingsIcon, LogoutIcon,
+  GridIcon, CalendarIcon, HeartIcon, SettingsIcon, LogoutIcon,
   MenuIcon, SearchIcon, PlusIcon, BookSolidIcon, FlameIcon, SmileyIcon,
   HomeIcon, StatsIcon, ProfileIcon,
 } from "../components/Icons.jsx";
 
-// Sample cards shown after any real entries (mirrors the original static markup).
-const SAMPLE_CARDS = [
-  {
-    mood: "😊", moodClass: "mood-happy", moodTitle: "Happy", date: "Today · 8:14 AM",
-    title: "A calm start to the day",
-    body: "Woke up early and made coffee before the house got busy. There's something about the quiet that makes everything feel possible…",
-    tags: ["morning", "gratitude"],
-  },
-  {
-    mood: "🥰", moodClass: "mood-grateful", moodTitle: "Grateful", date: "Yesterday · 9:42 PM",
-    title: "Dinner with old friends",
-    body: "We laughed about things that happened years ago. I forgot how good it feels to be fully known by people who've stayed…",
-    tags: ["friends", "memories"],
-  },
-  {
-    mood: "😮‍💨", moodClass: "mood-tired", moodTitle: "Tired", date: "Jun 7 · 11:10 PM",
-    title: "Long but worth it",
-    body: "Pushed through a heavy workload today. Tired, but proud of how much I got done. Reminding myself rest is earned…",
-    tags: ["work", "reflection"],
-  },
-  {
-    mood: "🤔", moodClass: "mood-thoughtful", moodTitle: "Thoughtful", date: "Jun 5 · 7:30 AM",
-    title: "Thinking about the year ahead",
-    body: "Started jotting down a few goals. Nothing too rigid — just gentle directions I'd like my life to drift toward…",
-    tags: ["goals", "planning"],
-  },
-];
+// -----------------------------------------------------------------------------
+// PLACEHOLDER DATA
+// -----------------------------------------------------------------------------
+// These are stand-ins for data that will later come from the database.
+// They are plain objects/arrays so the dashboard has something to show today.
 
-function formatCardDate(createdAt) {
-  return new Date(createdAt).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+// Who is logged in (later: fetched from the logged-in user's account).
+const SAMPLE_USER = {
+  name: "friend",
+  avatar: "F",
+  greeting: "Good morning",
+  subtitle: "Let's capture today's thoughts.",
+};
 
-function computeStats(entries) {
-  const now = new Date();
-
-  const month = entries.filter((e) => {
-    const d = new Date(e.createdAt);
-    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-  }).length;
-
-  const counts = {};
-  entries.forEach((e) => {
-    if (e.mood) counts[e.mood] = (counts[e.mood] || 0) + 1;
-  });
-  const topMood = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] || "—";
-
-  // Current streak: consecutive days up to today (or yesterday) with an entry.
-  const days = new Set(entries.map((e) => new Date(e.createdAt).toDateString()));
-  let streak = 0;
-  const cursor = new Date();
-  if (!days.has(cursor.toDateString())) {
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  while (days.has(cursor.toDateString())) {
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-
-  return { total: entries.length, month, topMood, streak };
-}
+// The other three stat numbers (later: calculated by the backend).
+// "Total entries" is NOT here — we read that live from the shared entries list.
+const SAMPLE_STATS = {
+  streak: 5,
+  month: 12,
+  topMood: "😊",
+};
 
 export default function Dashboard() {
+  // useNavigate lets us change pages from code (used by the logout button).
   const navigate = useNavigate();
-  const [entries, setEntries] = useState([]);
+
+  // Is the mobile sidebar drawer open? This is real UI state React owns.
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    setEntries(loadEntries());
-  }, []);
+  // ---- App data -------------------------------------------------------------
+  // The entries come from the shared context, so anything added in the editor
+  // shows up here automatically.
+  const { entries } = useEntries();
 
-  // Greeting + name derived from the stored user
-  const stored = getUser();
-  const displayName = stored
-    ? stored.includes("@") ? stored.split("@")[0] : stored
-    : "friend";
-  const avatar = displayName.charAt(0);
+  // The user is still a placeholder for now.
+  // TODO (database): replace this with the logged-in user's data from your API.
+  const [user] = useState(SAMPLE_USER);
 
-  const hour = new Date().getHours();
-  const part = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
-
-  const todayDate = new Date().toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-
-  const stats = useMemo(() => computeStats(entries), [entries]);
+  // Stats: "Total entries" is the live count; the rest are placeholders.
+  const stats = { ...SAMPLE_STATS, total: entries.length };
 
   const handleLogout = () => {
-    clearUser();
+    // TODO (database): also tell the backend to end the session here.
     navigate("/login");
   };
+
+  // Describe the four stat cards as data, then render them with one <StatCard>.
+  // Adding or changing a card now means editing this list — not copying markup.
+  const statCards = [
+    { icon: <BookSolidIcon />, iconClass: "icon-purple", value: stats.total, label: "Total entries" },
+    { icon: <FlameIcon />, iconClass: "icon-pink", value: `${stats.streak} ${stats.streak === 1 ? "day" : "days"}`, label: "Current streak" },
+    { icon: <CalendarIcon />, iconClass: "icon-purple", value: stats.month, label: "This month" },
+    { icon: <SmileyIcon />, iconClass: "icon-pink", value: stats.topMood, label: "Top mood" },
+  ];
 
   return (
     <div className="dash">
@@ -121,22 +94,6 @@ export default function Dashboard() {
             <GridIcon />
             Dashboard
           </Link>
-          <a href="#" className="dash-nav-link" onClick={() => setMenuOpen(false)}>
-            <BookIcon />
-            My Entries
-          </a>
-          <a href="#" className="dash-nav-link" onClick={() => setMenuOpen(false)}>
-            <CalendarIcon />
-            Calendar
-          </a>
-          <a href="#" className="dash-nav-link" onClick={() => setMenuOpen(false)}>
-            <HeartIcon />
-            Favourites
-          </a>
-          <a href="#" className="dash-nav-link" onClick={() => setMenuOpen(false)}>
-            <SettingsIcon />
-            Settings
-          </a>
         </nav>
 
         <button type="button" className="dash-nav-link dash-logout" onClick={handleLogout}>
@@ -157,11 +114,11 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* TOPBAR */}
+        {/* TOPBAR — greeting comes straight from the user data above. */}
         <header className="dash-topbar">
           <div className="dash-greeting">
-            <h1>Good {part}, <span className="accent">{displayName}</span> 👋</h1>
-            <p>{todayDate} · Let's capture today's thoughts.</p>
+            <h1>{user.greeting}, <span className="accent">{user.name}</span> 👋</h1>
+            <p>{user.subtitle}</p>
           </div>
 
           <div className="dash-topbar-actions">
@@ -169,7 +126,7 @@ export default function Dashboard() {
               <PlusIcon />
               New Entry
             </Link>
-            <span className="dash-avatar" aria-hidden="true">{avatar}</span>
+            <span className="dash-avatar" aria-hidden="true">{user.avatar}</span>
           </div>
         </header>
 
@@ -182,39 +139,17 @@ export default function Dashboard() {
           <p>"The pages you write today can change your tomorrow."</p>
         </section>
 
-        {/* STAT CARDS */}
+        {/* STAT CARDS — one reusable <StatCard> per item in the list above. */}
         <section className="dash-stats">
-          <article className="stat-card">
-            <span className="stat-icon icon-purple"><BookSolidIcon /></span>
-            <div className="stat-info">
-              <strong>{stats.total}</strong>
-              <span>Total entries</span>
-            </div>
-          </article>
-
-          <article className="stat-card">
-            <span className="stat-icon icon-pink"><FlameIcon /></span>
-            <div className="stat-info">
-              <strong>{stats.streak} {stats.streak === 1 ? "day" : "days"}</strong>
-              <span>Current streak</span>
-            </div>
-          </article>
-
-          <article className="stat-card">
-            <span className="stat-icon icon-purple"><CalendarIcon /></span>
-            <div className="stat-info">
-              <strong>{stats.month}</strong>
-              <span>This month</span>
-            </div>
-          </article>
-
-          <article className="stat-card">
-            <span className="stat-icon icon-pink"><SmileyIcon /></span>
-            <div className="stat-info">
-              <strong>{stats.topMood}</strong>
-              <span>Top mood</span>
-            </div>
-          </article>
+          {statCards.map((card, i) => (
+            <StatCard
+              key={i}
+              icon={card.icon}
+              iconClass={card.iconClass}
+              value={card.value}
+              label={card.label}
+            />
+          ))}
         </section>
 
         {/* RECENT ENTRIES */}
@@ -225,43 +160,13 @@ export default function Dashboard() {
           </div>
 
           <div className="entry-grid">
-            {/* Saved entries first, newest first */}
+            {/* Loop over the entries and render one reusable <EntryCard> each.
+                `key` helps React tell the cards apart when the list changes. */}
             {entries.map((entry) => (
-              <Link key={entry.id} to={`/view/${entry.id}`} className="entry-card entry-link">
-                <div className="entry-top">
-                  <span className="entry-mood">{entry.mood || "📝"}</span>
-                  <span className="entry-date">{formatCardDate(entry.createdAt)}</span>
-                </div>
-                <h3>{entry.title}</h3>
-                <p>{entry.body}</p>
-                {entry.tags && entry.tags.length > 0 && (
-                  <div className="entry-tags">
-                    {entry.tags.map((t, i) => (
-                      <span key={i} className="tag">{t}</span>
-                    ))}
-                  </div>
-                )}
-              </Link>
+              <EntryCard key={entry.id} entry={entry} />
             ))}
 
-            {/* Sample cards */}
-            {SAMPLE_CARDS.map((card, i) => (
-              <article key={`sample-${i}`} className="entry-card">
-                <div className="entry-top">
-                  <span className={`entry-mood ${card.moodClass}`} title={card.moodTitle}>{card.mood}</span>
-                  <span className="entry-date">{card.date}</span>
-                </div>
-                <h3>{card.title}</h3>
-                <p>{card.body}</p>
-                <div className="entry-tags">
-                  {card.tags.map((t, j) => (
-                    <span key={j} className="tag">{t}</span>
-                  ))}
-                </div>
-              </article>
-            ))}
-
-            {/* New entry tile */}
+            {/* New entry tile — takes the user to the editor page. */}
             <button type="button" className="entry-card entry-new" onClick={() => navigate("/entry")}>
               <span className="entry-new-icon"><PlusIcon /></span>
               <span className="entry-new-text">Write a new entry</span>
@@ -279,10 +184,6 @@ export default function Dashboard() {
           <HomeIcon />
           <span>Home</span>
         </Link>
-        <a href="#" className="dash-bottom-link">
-          <CalendarIcon />
-          <span>Calendar</span>
-        </a>
         <Link to="/entry" className="dash-fab" aria-label="New entry">
           <PlusIcon strokeWidth={2.5} />
         </Link>

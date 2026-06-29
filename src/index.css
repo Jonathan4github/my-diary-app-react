@@ -737,9 +737,26 @@ body {
   background: var(--purple-soft);
 }
 
+/* Mood colours — each mood gets its own soft tint. */
 .entry-mood.mood-grateful,
 .entry-mood.mood-happy {
   background: var(--pink-soft);
+}
+
+.entry-mood.mood-calm {
+  background: #e1f4ee; /* soft mint */
+}
+
+.entry-mood.mood-thoughtful {
+  background: var(--purple-soft);
+}
+
+.entry-mood.mood-tired {
+  background: #edeff4; /* soft grey */
+}
+
+.entry-mood.mood-low {
+  background: #e4ecfb; /* soft blue */
 }
 
 .entry-date {

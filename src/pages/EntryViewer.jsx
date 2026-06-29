@@ -1,15 +1,26 @@
-import { useMemo } from "react";
+// EntryViewer.jsx
+// -----------------------------------------------------------------------------
+// A PURE React, read-only page that shows ONE diary entry. No localStorage.
+//
+// It finds the entry to show in the shared list (our EntriesContext) using the
+// id from the URL, e.g. /view/3. Delete also goes through the context, so the
+// dashboard updates the moment an entry is removed.
+// -----------------------------------------------------------------------------
+
 import { Link, useNavigate, useParams } from "react-router-dom";
 import BgBlob from "../components/BgBlob.jsx";
 import BottomNav from "../components/BottomNav.jsx";
-import { loadEntries, saveEntries } from "../lib/storage.js";
+import { useEntries } from "../context/EntriesContext.jsx";
 import { BackIcon, PencilIcon, TrashIcon } from "../components/Icons.jsx";
 
-// Shown when no real entry is requested (e.g. previewing the page).
+// Shown when no real entry matches the URL (e.g. visiting /view with no id).
 const SAMPLE = {
-  title: "A calm start to the day",
+  id: null,
   mood: "😊",
-  createdAt: new Date().toISOString(),
+  moodClass: "mood-happy",
+  moodTitle: "Happy",
+  date: "Today",
+  title: "A calm start to the day",
   tags: ["morning", "gratitude"],
   body:
     "Woke up early today before the house got busy. Made a cup of coffee and " +
@@ -21,26 +32,22 @@ const SAMPLE = {
 
 export default function EntryViewer() {
   const navigate = useNavigate();
+
+  // Read the id from the URL (/view/:id) and turn it into a number.
   const { id } = useParams();
   const viewId = id ? Number(id) : null;
 
-  const realEntry = useMemo(
-    () => (viewId != null ? loadEntries().find((e) => e.id === viewId) : undefined),
-    [viewId]
-  );
+  const { entries, deleteEntry } = useEntries();
+
+  // Find the matching entry. If there isn't one, fall back to the sample.
+  const realEntry = entries.find((e) => e.id === viewId);
   const entry = realEntry || SAMPLE;
   const isSample = !realEntry;
 
-  const dateLabel = new Date(entry.createdAt).toLocaleDateString(undefined, {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
   const handleDelete = () => {
+    // Ask before deleting, then remove it from the shared list.
     if (!window.confirm("Delete this entry? This can't be undone.")) return;
-    saveEntries(loadEntries().filter((e) => e.id !== entry.id));
+    deleteEntry(entry.id);
     navigate("/dashboard");
   };
 
@@ -56,8 +63,9 @@ export default function EntryViewer() {
             Back
           </Link>
 
-          <span className="editor-date">{dateLabel}</span>
+          <span className="editor-date">{entry.date}</span>
 
+          {/* Edit/Delete only make sense for a real saved entry, not the sample. */}
           {!isSample && (
             <div className="editor-actions">
               <Link to={`/entry/${entry.id}`} className="btn secondary-btn viewer-edit">
@@ -74,7 +82,9 @@ export default function EntryViewer() {
 
         {/* CONTENT */}
         <div>
-          <div className="viewer-mood">{entry.mood || "📝"}</div>
+          <div className={`viewer-mood ${entry.moodClass || ""}`} title={entry.moodTitle}>
+            {entry.mood || "📝"}
+          </div>
           <h1 className="viewer-title">{entry.title}</h1>
           <div className="viewer-body">{entry.body}</div>
           {entry.tags && entry.tags.length > 0 && (
