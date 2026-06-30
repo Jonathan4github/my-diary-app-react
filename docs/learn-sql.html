@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Learn SQL — A Simple Lesson</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --accent: #38bdf8;
+      --accent-2: #34d399;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --border: #334155;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    header {
+      text-align: center;
+      padding: 40px 20px 20px;
+    }
+    header h1 { margin: 0; font-size: 2.2rem; }
+    header p { color: var(--muted); margin: 8px 0 0; }
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+    .lesson {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 20px 0;
+    }
+    .lesson h2 {
+      margin-top: 0;
+      color: var(--accent);
+      font-size: 1.3rem;
+    }
+    code {
+      background: #0b1220;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent-2);
+      font-family: "SF Mono", Consolas, monospace;
+    }
+    .try {
+      display: inline-block;
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 4px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-top: 8px;
+    }
+    .try:hover { background: var(--accent); color: var(--bg); }
+
+    .playground {
+      background: var(--card);
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 30px 0;
+    }
+    .playground h2 { margin-top: 0; color: var(--accent); }
+    textarea {
+      width: 100%;
+      min-height: 90px;
+      background: #0b1220;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 0.95rem;
+      resize: vertical;
+    }
+    .run {
+      background: var(--accent-2);
+      color: #04231a;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+    .run:hover { opacity: 0.9; }
+    .run:disabled { opacity: 0.5; cursor: wait; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 16px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th { background: #0b1220; color: var(--accent); }
+    tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    .msg { margin-top: 14px; color: var(--muted); }
+    .error { color: #f87171; }
+    .pill {
+      display: inline-block;
+      background: #0b1220;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      margin: 4px 4px 0 0;
+    }
+
+    .exercise {
+      background: var(--card);
+      border: 2px dashed var(--accent-2);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 30px 0;
+    }
+    .exercise h2 { margin-top: 0; color: var(--accent-2); }
+    .task {
+      border-left: 3px solid var(--accent);
+      padding: 4px 0 4px 16px;
+      margin: 18px 0;
+    }
+    .task strong { color: var(--accent); }
+    details {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-top: 10px;
+    }
+    summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.9rem;
+      user-select: none;
+    }
+    summary:hover { color: var(--text); }
+    details pre {
+      margin: 12px 0 0;
+      white-space: pre-wrap;
+      color: var(--accent-2);
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 0.9rem;
+    }
+    .schema {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .schema b { color: var(--accent); }
+    .schema .fk { color: var(--accent-2); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📊 Learn SQL in 10 Minutes</h1>
+    <p>Read a little, then run real queries on a real database below.</p>
+  </header>
+
+  <main>
+    <div class="lesson">
+      <h2>What is SQL?</h2>
+      <p><strong>SQL</strong> (Structured Query Language) is how we talk to databases.
+      A database stores information in <strong>tables</strong> — like a spreadsheet with
+      rows and columns.</p>
+      <p>We have a table called <code>students</code> with these columns:</p>
+      <span class="pill">id</span>
+      <span class="pill">name</span>
+      <span class="pill">age</span>
+      <span class="pill">grade</span>
+      <span class="pill">city</span>
+    </div>
+
+    <div class="lesson">
+      <h2>1. SELECT — get data</h2>
+      <p>The <code>*</code> means "all columns".</p>
+      <p><code>SELECT * FROM students;</code></p>
+      <button class="try" data-sql="SELECT * FROM students;">Try it ▶</button>
+    </div>
+
+    <div class="lesson">
+      <h2>2. Pick only some columns</h2>
+      <p>Ask for just the columns you want.</p>
+      <p><code>SELECT name, age FROM students;</code></p>
+      <button class="try" data-sql="SELECT name, age FROM students;">Try it ▶</button>
+    </div>
+
+    <div class="lesson">
+      <h2>3. WHERE — filter rows</h2>
+      <p>Only show rows that match a condition.</p>
+      <p><code>SELECT name, age FROM students WHERE age &gt; 12;</code></p>
+      <button class="try" data-sql="SELECT name, age FROM students WHERE age > 12;">Try it ▶</button>
+    </div>
+
+    <div class="lesson">
+      <h2>4. ORDER BY — sort results</h2>
+      <p>Sort by age, biggest first (<code>DESC</code>).</p>
+      <p><code>SELECT name, age FROM students ORDER BY age DESC;</code></p>
+      <button class="try" data-sql="SELECT name, age FROM students ORDER BY age DESC;">Try it ▶</button>
+    </div>
+
+    <div class="lesson">
+      <h2>5. COUNT — how many?</h2>
+      <p>Count how many students are in each grade.</p>
+      <p><code>SELECT grade, COUNT(*) AS total FROM students GROUP BY grade;</code></p>
+      <button class="try" data-sql="SELECT grade, COUNT(*) AS total FROM students GROUP BY grade;">Try it ▶</button>
+    </div>
+
+    <div class="lesson">
+      <h2>6. INSERT — add a new row</h2>
+      <p>Add a brand new student, then run <code>SELECT * FROM students;</code> to see them.</p>
+      <p><code>INSERT INTO students (name, age, grade, city) VALUES ('Zara', 11, 6, 'Lagos');</code></p>
+      <button class="try" data-sql="INSERT INTO students (name, age, grade, city) VALUES ('Zara', 11, 6, 'Lagos');">Try it ▶</button>
+    </div>
+
+    <div class="lesson">
+      <h2>7. UPDATE — change existing rows</h2>
+      <p>Change data that is already there. Use <code>WHERE</code> to pick which rows!
+      Then run <code>SELECT * FROM students;</code> to see the change.</p>
+      <p><code>UPDATE students SET city = 'Jos' WHERE name = 'Ben';</code></p>
+      <button class="try" data-sql="UPDATE students SET city = 'Jos' WHERE name = 'Ben';">Try it ▶</button>
+    </div>
+
+    <div class="lesson">
+      <h2>8. DELETE — remove rows</h2>
+      <p>Delete rows that match a condition. ⚠️ Always use <code>WHERE</code> —
+      without it, <code>DELETE</code> removes <em>every</em> row! (Click <strong>Reset data</strong> to get them back.)</p>
+      <p><code>DELETE FROM students WHERE name = 'David';</code></p>
+      <button class="try" data-sql="DELETE FROM students WHERE name = 'David';">Try it ▶</button>
+    </div>
+
+    <div class="lesson">
+      <h2>9. JOIN — combine two tables</h2>
+      <p>We also have a <code>teachers</code> table that lists the teacher for each grade:</p>
+      <span class="pill">grade</span>
+      <span class="pill">teacher</span>
+      <button class="try" data-sql="SELECT * FROM teachers;" style="display:block;">See teachers ▶</button>
+      <p style="margin-top:16px;">A <code>JOIN</code> matches rows from both tables where the
+      <code>grade</code> is the same — so each student gets their teacher's name:</p>
+      <p><code>SELECT students.name, students.grade, teachers.teacher<br>
+      FROM students<br>
+      JOIN teachers ON students.grade = teachers.grade;</code></p>
+      <button class="try" data-sql="SELECT students.name, students.grade, teachers.teacher FROM students JOIN teachers ON students.grade = teachers.grade;">Try it ▶</button>
+    </div>
+
+    <div class="lesson">
+      <h2>10. CREATE TABLE — make your own table</h2>
+      <p>Before you can store data, you build the table and say what columns it has
+      and what <em>type</em> each one is (<code>TEXT</code> for words, <code>INTEGER</code> for whole numbers).</p>
+      <p><code>CREATE TABLE clubs (<br>
+      &nbsp;&nbsp;id INTEGER PRIMARY KEY AUTOINCREMENT,<br>
+      &nbsp;&nbsp;name TEXT<br>
+      );</code></p>
+      <p>This button creates the table, adds two clubs, and shows them all at once:</p>
+      <button class="try" data-sql="CREATE TABLE IF NOT EXISTS clubs (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT); INSERT INTO clubs (name) VALUES ('Chess Club'), ('Drama Club'); SELECT * FROM clubs;">Try it ▶</button>
+    </div>
+
+    <div class="lesson">
+      <h2>11. PRIMARY KEY &amp; FOREIGN KEY</h2>
+      <p>These two ideas are how tables stay organized and connected.</p>
+
+      <p>🔑 <strong>PRIMARY KEY</strong> — a column that gives every row a <em>unique</em> id.
+      No two rows can share it. In our <code>students</code> table, <code>id</code> is the primary key:
+      student #1 is always student #1. <code>AUTOINCREMENT</code> just means the database
+      fills in the next number (1, 2, 3, …) automatically.</p>
+
+      <p>🔗 <strong>FOREIGN KEY</strong> — a column that <em>points to</em> the primary key of another
+      table. It's how two tables are linked. For example, an <code>enrollments</code> table can use a
+      <code>student_id</code> column that refers back to <code>students.id</code>:</p>
+
+      <p><code>CREATE TABLE enrollments (<br>
+      &nbsp;&nbsp;id INTEGER PRIMARY KEY AUTOINCREMENT,<br>
+      &nbsp;&nbsp;student_id INTEGER,<br>
+      &nbsp;&nbsp;subject TEXT,<br>
+      &nbsp;&nbsp;FOREIGN KEY (student_id) REFERENCES students(id)<br>
+      );</code></p>
+
+      <p>Now <code>student_id</code> in <code>enrollments</code> must match a real <code>id</code> in
+      <code>students</code> — so the data can never point to a student who doesn't exist.
+      This button builds the table, signs up student #1 for two subjects, and joins it back to
+      <code>students</code> so you can see the link in action:</p>
+      <button class="try" data-sql="CREATE TABLE IF NOT EXISTS enrollments (id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER, subject TEXT, FOREIGN KEY (student_id) REFERENCES students(id)); INSERT INTO enrollments (student_id, subject) VALUES (1, 'Maths'), (1, 'Science'); SELECT students.name, enrollments.subject FROM enrollments JOIN students ON enrollments.student_id = students.id;">Try it ▶</button>
+      <p class="msg" style="margin-top:10px;">In short: a <strong>primary key</strong> identifies a row in its own table;
+      a <strong>foreign key</strong> borrows that id to link to it from another table.</p>
+    </div>
+
+    <div class="exercise">
+      <h2>📝 Final Exercise: Build the "My Diary" Database</h2>
+      <p>Now put it all together! A diary app needs to remember two things:
+      <strong>who the users are</strong>, and <strong>what entries each user wrote</strong>.
+      You'll build both tables and link them with a foreign key — exactly like the lessons above.</p>
+
+      <p><strong>The plan:</strong> one user can write many entries, so each entry must remember
+      which user it belongs to. We do that with a <code>user_id</code> foreign key on the entries table.</p>
+
+      <div class="schema">
+        <b>users</b>( id 🔑, username, email )<br>
+        <b>entries</b>( id 🔑, <span class="fk">user_id 🔗→ users.id</span>, mood, title, body, entry_date )
+      </div>
+
+      <p class="msg">Do each task in the <strong>Playground below</strong>. Try it yourself first —
+      then open "Show solution" to check. Click <strong>Reset data</strong> any time to start over.</p>
+
+      <div class="task">
+        <p><strong>Task 1 — Create the <code>users</code> table.</strong></p>
+        <p>It needs: an <code>id</code> as the PRIMARY KEY (auto-incrementing),
+        a <code>username</code> (TEXT) and an <code>email</code> (TEXT).</p>
+        <details>
+          <summary>💡 Hint</summary>
+          <pre>CREATE TABLE name ( id INTEGER PRIMARY KEY AUTOINCREMENT, ... );</pre>
+        </details>
+        <details>
+          <summary>✅ Show solution</summary>
+          <pre>CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT,
+  email TEXT
+);</pre>
+        </details>
+      </div>
+
+      <div class="task">
+        <p><strong>Task 2 — Create the <code>entries</code> table with a foreign key.</strong></p>
+        <p>It needs: <code>id</code> (PRIMARY KEY), <code>user_id</code> (the FOREIGN KEY pointing to
+        <code>users.id</code>), plus <code>mood</code>, <code>title</code>, <code>body</code>
+        and <code>entry_date</code>.</p>
+        <details>
+          <summary>💡 Hint</summary>
+          <pre>... FOREIGN KEY (user_id) REFERENCES users(id)</pre>
+        </details>
+        <details>
+          <summary>✅ Show solution</summary>
+          <pre>CREATE TABLE entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  mood TEXT,
+  title TEXT,
+  body TEXT,
+  entry_date TEXT,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);</pre>
+        </details>
+      </div>
+
+      <div class="task">
+        <p><strong>Task 3 — Add a user, then add two diary entries for that user.</strong></p>
+        <p>Insert one user (their <code>id</code> will be <code>1</code>), then insert two entries
+        that use <code>user_id = 1</code>.</p>
+        <details>
+          <summary>✅ Show solution</summary>
+          <pre>INSERT INTO users (username, email)
+VALUES ('seun', 'seun@example.com');
+
+INSERT INTO entries (user_id, mood, title, body, entry_date)
+VALUES
+  (1, '😊', 'A calm start', 'Made coffee before the house got busy.', '2026-06-30'),
+  (1, '🥰', 'Dinner with friends', 'We laughed about old times.', '2026-06-29');</pre>
+        </details>
+      </div>
+
+      <div class="task">
+        <p><strong>Task 4 — Show each entry next to its author's username (JOIN).</strong></p>
+        <p>Join <code>entries</code> to <code>users</code> on the matching id, and show the
+        username, title and mood.</p>
+        <details>
+          <summary>✅ Show solution</summary>
+          <pre>SELECT users.username, entries.mood, entries.title
+FROM entries
+JOIN users ON entries.user_id = users.id;</pre>
+        </details>
+      </div>
+
+      <p class="msg">🎉 If Task 4 shows each entry beside <code>seun</code>, you've built a real relational
+      database — the same shape that powers the My Diary app!</p>
+    </div>
+
+    <div class="playground">
+      <h2>🧪 SQL Playground</h2>
+      <p class="msg">Type any SQL and click <strong>Run</strong>. Try changing the examples above!</p>
+      <textarea id="editor">SELECT * FROM students;</textarea>
+      <br />
+      <button class="run" id="runBtn" disabled>Loading database…</button>
+      <button class="try" id="resetBtn" style="margin-left:8px;">Reset data</button>
+      <div id="output" class="msg"></div>
+    </div>
+  </main>
+
+  <!-- sql.js: a real SQLite database that runs in the browser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+  <script>
+    let db;
+    const runBtn = document.getElementById('runBtn');
+    const editor = document.getElementById('editor');
+    const output = document.getElementById('output');
+
+    const SEED = `
+      CREATE TABLE students (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        age INTEGER,
+        grade INTEGER,
+        city TEXT
+      );
+      INSERT INTO students (name, age, grade, city) VALUES
+        ('Amina', 13, 7, 'Kano'),
+        ('Ben',   12, 6, 'Abuja'),
+        ('Chika', 14, 8, 'Enugu'),
+        ('David', 12, 6, 'Lagos'),
+        ('Esther',13, 7, 'Ibadan');
+
+      CREATE TABLE teachers (
+        grade INTEGER,
+        teacher TEXT
+      );
+      INSERT INTO teachers (grade, teacher) VALUES
+        (6, 'Mr. Okoro'),
+        (7, 'Mrs. Bello'),
+        (8, 'Ms. Aliyu');
+    `;
+
+    function seedDatabase() {
+      db.run(SEED);
+    }
+
+    initSqlJs({
+      locateFile: f => 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/' + f
+    }).then(SQL => {
+      db = new SQL.Database();
+      seedDatabase();
+      runBtn.disabled = false;
+      runBtn.textContent = 'Run ▶';
+      renderResult('Database ready! Click Run to see your results.');
+    }).catch(err => {
+      output.innerHTML = '<span class="error">Could not load the database. ' +
+        'Make sure you are connected to the internet.</span>';
+    });
+
+    function renderResult(message) {
+      output.innerHTML = '<span class="msg">' + message + '</span>';
+    }
+
+    function runQuery(sql) {
+      if (!db) return;
+      try {
+        const results = db.exec(sql);
+        if (results.length === 0) {
+          // INSERT/UPDATE/DELETE return no rows
+          renderResult('✅ Done! (No rows to show — try a SELECT to see the data.)');
+          return;
+        }
+        const { columns, values } = results[0];
+        let html = '<table><thead><tr>';
+        columns.forEach(c => html += '<th>' + c + '</th>');
+        html += '</tr></thead><tbody>';
+        values.forEach(row => {
+          html += '<tr>';
+          row.forEach(cell => html += '<td>' + (cell === null ? '' : cell) + '</td>');
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+        html += '<p class="msg">' + values.length + ' row(s) returned.</p>';
+        output.innerHTML = html;
+      } catch (e) {
+        output.innerHTML = '<span class="error">⚠️ ' + e.message + '</span>';
+      }
+    }
+
+    runBtn.addEventListener('click', () => runQuery(editor.value));
+
+    // "Try it" buttons fill the editor and run automatically
+    document.querySelectorAll('.try[data-sql]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        editor.value = btn.dataset.sql;
+        editor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        runQuery(btn.dataset.sql);
+      });
+    });
+
+    // Reset button: rebuild the table from scratch
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if (!db) return;
+      db.run('DROP TABLE IF EXISTS students; DROP TABLE IF EXISTS teachers; DROP TABLE IF EXISTS clubs; DROP TABLE IF EXISTS enrollments; DROP TABLE IF EXISTS users; DROP TABLE IF EXISTS entries;');
+      seedDatabase();
+      renderResult('🔄 Data reset to the original 5 students.');
+    });
+
+    // Ctrl/Cmd + Enter to run
+    editor.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runQuery(editor.value);
+    });
+  </script>
+</body>
+</html>
